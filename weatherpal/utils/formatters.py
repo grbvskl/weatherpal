@@ -35,8 +35,17 @@ def format_current_weather(city_name: str, snap: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
+def _day_label_from_date(date_s: str) -> str:
+    # Open-Meteo daily `time` is YYYY-MM-DD in the response timezone.
+    # Use it directly to avoid UTC date shifting.
+    try:
+        return datetime.strptime(date_s, "%Y-%m-%d").strftime("%a %d %b")
+    except ValueError:
+        return date_s
+
+
 def _day_label(ts: int) -> str:
-    return datetime.utcfromtimestamp(ts).strftime("%a %d %b")
+    return datetime.fromtimestamp(ts).strftime("%a %d %b")
 
 
 def format_forecast(city_name: str, daily: list[dict[str, Any]]) -> str:
@@ -44,7 +53,10 @@ def format_forecast(city_name: str, daily: list[dict[str, Any]]) -> str:
         return f"📍 <b>{esc(city_name)}</b>\n\nNo forecast data."
     lines = [f"📍 <b>{esc(city_name)}</b>", "", "📅 <b>Daily outlook</b>", ""]
     for d in daily:
-        day = _day_label(d["dt"])
+        if d.get("date"):
+            day = _day_label_from_date(str(d["date"]))
+        else:
+            day = _day_label(d["dt"])
         tmin = d.get("temp_min")
         tmax = d.get("temp_max")
         em = d.get("emoji") or "☁️"
